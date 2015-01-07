@@ -7,7 +7,7 @@ sub new {
 
 	my $self = bless({}, $class);
 
-	$self->{'struct'} = {};
+	$self->{'struct'} = undef;
 	$self->{'json_package'} = $self->_detectJSON();
 
 	if (! $self->{'json_package'}) {
@@ -21,6 +21,14 @@ sub new {
 	}
 
 	return $self;
+}
+
+sub success {
+	return ref $_[0]->{'struct'} eq 'HASH';
+}
+
+sub struct {
+	return $_[0]->{'struct'};
 }
 
 sub _detectJSON {
@@ -54,15 +62,16 @@ sub _parseFromDataString {
 	my $self = shift @_;
 	my $data = shift @_;
 
-	my @lines = split(/\r?\n/, $data);
-
-	@lines = map { s/^\s+//g } @lines;
-	@lines = map { s/\s+$//g } @lines;
-
 	my $json = $self->{'json_package'}->new();
-	my $json_data = $json->decode( join("\n", @lines) );
+	my $json_data;
 
-	$self->{'struct'} = $json_data;
+	eval {
+		$json_data = $json->decode( $data );
+	};
+
+	if (! $@) {
+		$self->{'struct'} = $json_data;
+	}
 }
 
 

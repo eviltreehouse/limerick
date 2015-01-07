@@ -1,20 +1,20 @@
 {
 	"apps": 
 		{
-/*			"appName"  : {
-				"appRoot" : "/path/to/poet/approot",
-				"active"  : true,
-				"mode"    : "development",
-				"port"    : 5001
+			"_appName"  : {
+				"appRoot"     : "/path/to/poet/approot",
+				"description" : "App template -- entries starting with '_' are ignored :)",
+				"active"     : true,
+				"mode"       : "development",
+				"user"       : false,
+				"server"     : "Starlet"
 			}
-			,...
-*/
 		},
 
 	"active": true,
 
 	"ports": {
-		"min": 5001,
-		"max": 5099
+		"low": 5001,
+		"high": 5099
 	}
 }

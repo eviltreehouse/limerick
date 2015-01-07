@@ -42,14 +42,34 @@ sub cmd_setup {
 		return 1;
 	}
 
-	print "[.] $dest_file written successfully.\n";
+	print "[.] Base configuration file written successfully.\n";
 	return 0;
 }
 
 sub cmd_app { 
-	return 0;
+	# Copies necessary files into appRoot to support
+	# running with Limerick...
+
+	print "[X] Not implemented.\n";
+	return 1;
 }
 
 sub cmd_build {
-	return 0;
+	my $L = new Limerick();
+	
+	if (! $L->config->success()) {
+		print "[!] Configuration file is malformed.\n";
+		return 1;
+	} else {
+		print "[.] Everything looks good.\n";
+	}
+
+	my $rc_file_name = "$FindBin::Bin/limerick-rc.sh";
+
+	if ($L->build_rc_script( $rc_file_name )) {
+		print "[.] Script build complete.\n";
+	} else {
+		print "[!] Failed to build script.\n";
+	}
+
 }
