@@ -1,0 +1,20 @@
+{
+	"apps": 
+		{
+/*			"appName"  : {
+				"appRoot" : "/path/to/poet/approot",
+				"active"  : true,
+				"mode"    : "development",
+				"port"    : 5001
+			}
+			,...
+*/
+		},
+
+	"active": true,
+
+	"ports": {
+		"min": 5001,
+		"max": 5099
+	}
+}
