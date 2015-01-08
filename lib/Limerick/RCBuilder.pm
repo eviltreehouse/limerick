@@ -312,9 +312,13 @@ sub write_manifest {
 	my $self = shift;
 	my $manfn = shift;
 
+	my $json = new JSON();
+
 	open(MANF, ">", $manfn) or return undef;
-	print MANF JSON::encode_json( $self->{'manifest'} );
+	print MANF $json->pretty->encode( $self->{'manifest'} );
 	close(MANF);
+
+	undef $json;
 
 	return 1;
 }
