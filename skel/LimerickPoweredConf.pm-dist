@@ -1,0 +1,18 @@
+package LimerickPowered::Conf;
+use strict;
+
+use Poet::Moose;
+extends 'Poet::Conf';
+
+override '_build_layer' => sub {
+	my $defined_layer = super();
+
+	if (defined $ENV{'LIMERICK_LAYER'}) {
+		return $ENV{'LIMERICK_LAYER'};
+	}
+
+	return $defined_layer;
+};
+
+
+1;

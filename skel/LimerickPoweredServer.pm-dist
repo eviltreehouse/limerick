@@ -1,0 +1,67 @@
+package LimerickPowered::Server;
+use strict;
+
+use Poet::Moose;
+extends 'Poet::Server';
+
+override 'get_plackup_options' => sub {
+	my $self = shift @_;
+	my @opts = super();
+
+	if (defined $ENV{'LIMERICK_SERVER_PORT'}) {
+		my $mIdx = $self->_lm_find_option('--port' => \@opts);
+		if ($mIdx != -1) {
+			splice(@opts, $mIdx, 2, '--port', $ENV{'LIMERICK_SERVER_PORT'});
+		} else {
+			push(@opts, '--port', $ENV{'LIMERICK_SERVER_PORT'});
+		}
+	}
+
+	if (defined $ENV{'LIMERICK_SERVER_LIB'} && length $ENV{'LIMERICK_SERVER_LIB'}) {
+		if (! $self->_lm_lib_available( $ENV{'LIMERICK_SERVER_LIB'}) ) {
+			print STDERR "[!] $ENV{'LIMERICK_SERVER_LIB'} is not available or functional on this system.\n";
+		} else {
+			my $mIdx = $self->_lm_find_option('--server' => \@opts);
+			if ($mIdx == -1) { $mIdx = $self->_lm_find_option('-s' => \@opts) };
+
+			if ($mIdx != -1) {
+				splice(@opts, $mIdx, 2, '--server', $ENV{'LIMERICK_SERVER_LIB'});
+			} else {
+				push(@opts, '--server', $ENV{'LIMERICK_SERVER_LIB'});
+			}
+		}
+	}
+
+	# if (defined $ENV{'LIMERICK_SERVER_ENV'}) {
+	# 	print "LIMERICK_SERVER_ENV = $ENV{'LIMERICK_SERVER_ENV'}\n";
+	# 	my $mIdx = $self->_lm_find_option('-E' => \@opts);
+	# 	if ($mIdx != -1) {
+	# 		splice(@opts, $mIdx, 2, '-E', $ENV{'LIMERICK_SERVER_ENV'});
+	# 	}
+	# }
+
+	return @opts;
+};
+
+method _lm_lib_available ($pm) {
+	eval "require $pm;";
+	return $@ ? 0 : 1;
+}
+
+method _lm_find_option () {
+	my $search = shift @_;
+	my $r_opts = shift @_;
+
+	my $idx = 0; 
+	foreach my $opt (@$r_opts) {
+		if ($opt =~ m/^$search/) {
+			return $idx;
+			last;
+		}
+		$idx++;
+	}
+
+	return -1;
+};
+
+1;

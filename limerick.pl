@@ -64,9 +64,10 @@ sub cmd_build {
 		print "[.] Everything looks good.\n";
 	}
 
-	my $rc_file_name = "$FindBin::Bin/limerick-rc.sh";
+	my $rc_file_name = "$FindBin::Bin/build/limerick-rc.sh";
+	my $mani_file_name = "$FindBin::Bin/build/limerick-apps.json";
 
-	if ($L->build_rc_script( $rc_file_name )) {
+	if ($L->build_rc_script( $rc_file_name, $mani_file_name )) {
 		print "[.] Script build complete.\n";
 	} else {
 		print "[!] Failed to build script.\n";
