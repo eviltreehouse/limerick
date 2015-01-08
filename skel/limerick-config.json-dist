@@ -16,5 +16,8 @@
 	"ports": {
 		"low": 5001,
 		"high": 5099
-	}
+	},
+
+	"as_root" : false,
+	"shell": "/bin/bash"
 }
