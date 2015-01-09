@@ -68,9 +68,18 @@ sub cmd_build {
 	my $mani_file_name = "$FindBin::Bin/build/limerick-apps.json";
 
 	if ($L->build_rc_script( $rc_file_name, $mani_file_name )) {
-		print "[.] Script build complete.\n";
+		print "[.] RC script build complete.\n";
 	} else {
-		print "[!] Failed to build script.\n";
+		print "[!] Failed to build RC script.\n";
+	}
+
+	if (my $ret = $L->build_frontend_config()) {
+		print "[.] Frontend build complete.\n";
+	} elsif( defined($ret) ) {
+		# We tried.. but we failed.
+		print "[!] Failed to build frontend configuration.\n";
+	} else {
+		# We determined one wasn't needed.
 	}
 
 }

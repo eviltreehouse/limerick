@@ -19,5 +19,6 @@
 	},
 
 	"as_root" : false,
-	"shell": "/bin/bash"
+	"shell": "/bin/bash",
+	"frontend": "nginx"
 }

@@ -8,6 +8,7 @@ sub new {
 
 	$self->{'Limerick'} = $_[1];
 	$self->{'last_port'} = undef;
+	$self->{'port_available'} = {};
 	$self->{'manifest'}  = {};
 
 	return $self;
@@ -33,6 +34,10 @@ sub _init_ports {
 	$self->{'port_low'}  = $self->configData->{'ports'}->{'low'};
 	$self->{'port_high'} = $self->configData->{'ports'}->{'high'};
 
+	for ( $self->{'port_low'} .. $self->{'port_high'} ) {
+		$self->{'port_available'}{$_} = 1;
+	}
+
 	return 1;
 }
 
@@ -41,11 +46,22 @@ sub _next_port {
 
 	if (! defined($self->{'last_port'})) {
 		$self->{'last_port'} = $self->{'port_low'};
+		$self->{'port_available'}{ $self->{'last_port'} } = 0;
+
 		return $self->{'port_low'};
 	} elsif ($self->{'last_port'} == $self->{'port_high'}) {
 		return undef;
 	} else {
-		return ++$self->{'last_port'};
+		my $ret = $self->{'last_port'} + 1;
+
+		if ( $self->{'port_available'}{$ret} ) {
+			$self->{'port_available'}{$ret} = 0;
+			$self->{'last_port'} = $ret;
+		} else {
+			# Next
+			$self->{'last_port'}++;
+			return $self->_next_port();
+		}
 	}
 }
 
