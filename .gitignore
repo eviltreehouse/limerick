@@ -6,3 +6,4 @@ site1/
 limerick-rc.sh
 limerick-apps.json
 limerick-nginx.conf
+*.backup

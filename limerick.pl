@@ -1,6 +1,7 @@
 #!/usr/bin/env perl
 use strict;
 use FindBin;
+require File::Spec;
 
 use lib "$FindBin::Bin/lib";
 require Limerick;
@@ -13,7 +14,8 @@ require Limerick;
 #---------------------------------------------------------------#
 my %commands = (
 	'setup' => \&cmd_setup,
-	'app'   => \&cmd_app,
+	'app-add'   => \&cmd_app_add,
+	'app-new'   => \&cmd_app_new,
 	'build' => \&cmd_build
 );
 
@@ -46,10 +48,52 @@ sub cmd_setup {
 	return 0;
 }
 
-sub cmd_app { 
+sub cmd_app_add { 
 	# Copies necessary files into appRoot to support
 	# running with Limerick...
 
+	my $app_path = $ARGV[1];
+
+	if (! -d $app_path) {
+		print "[!] $app_path is not a directory, or is not readable by this user.\n";
+		return 1;
+	}
+
+	if (! -f "$app_path/.poet_root") {
+		print "[!] $app_path does not appear to be a valid Poet application.\n";
+		return 1;
+	}
+
+	my $poet_root = `grep app_name $app_path/.poet_root`;
+
+	my ($app_name) = $poet_root =~ m/app_name\:\s+(.*?)$/;
+	if (! length $app_name) {
+		print "[!] Unable to determine application name!\n";
+		return 1;
+	}
+
+	$app_name = lc $app_name; $app_name =~ s/[^a-z0-9_]//g;
+
+	my $L = new Limerick();
+	
+	if (! $L->config->success()) {
+		print "[!] Configuration file is malformed.\n";
+		return 1;
+	} else {
+		print "[.] Setting up $app_name...\n";
+
+		my $cloneRet = $L->config->clone_app( '_template' => $app_name, { 'appRoot' => File::Spec->canonpath($app_path), 'description' => "Application $app_name" } );
+		if (! $cloneRet) {
+			print "[!] $app_name already in configuration -- or _template is missing. You will need to add by hand.\n";
+		}
+
+		return 1 if !$L->empower_app( $app_path );
+
+		return 0;
+	}
+}
+
+sub cmd_app_new {
 	print "[X] Not implemented.\n";
 	return 1;
 }

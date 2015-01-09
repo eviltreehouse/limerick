@@ -1,11 +1,12 @@
 {
 	"apps": 
 		{
-			"_appName"  : {
+			"_template"  : {
 				"appRoot"     : "/path/to/poet/approot",
 				"description" : "App template -- entries starting with '_' are ignored :)",
 				"active"     : true,
 				"mode"       : "development",
+				"bind"       : false,
 				"user"       : false,
 				"server"     : "Starlet"
 			}

@@ -4,6 +4,11 @@ use strict;
 require Limerick::ConfigParser;
 require Limerick::RCBuilder;
 
+my @APPFILES = (
+	[ 'skel/LimerickPoweredConf.pm-dist', 'lib/LimerickPowered', 'lib/LimerickPowered/Conf.pm' ],
+	[ 'skel/LimerickPoweredServer.pm-dist', 'lib/LimerickPowered', 'lib/LimerickPowered/Server.pm' ],
+);
+
 sub new {
 	my $self = bless({}, shift @_);
 
@@ -92,6 +97,29 @@ sub build_frontend_config {
 
 sub supported_frontends {
 	return qw/nginx/;
+}
+
+sub empower_app {
+	my $self = shift;
+	my $app_dir = shift;
+
+	foreach my $file (@APPFILES) {
+		my $src = join("/", "$FindBin::Bin", $file->[0]);
+		my $destdir = join("/", $app_dir, $file->[1]);
+		my $dest = join("/", $app_dir, $file->[2]);
+
+		`mkdir -p $destdir`;
+		return undef if $? > 0;
+
+		`cp $src $dest 2>/dev/null`;
+		return undef if $? > 0;
+
+		print "[+] $src => $dest\n";
+	}
+
+	`touch $app_dir/.limerick-powered`;
+
+	return 1;
 }
 
 
