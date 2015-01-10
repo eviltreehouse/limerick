@@ -11,6 +11,8 @@ sub new {
 	$self->{'port_available'} = {};
 	$self->{'manifest'}  = {};
 
+	$self->{'port_ranges'} = [];
+
 	return $self;
 }
 
@@ -31,11 +33,21 @@ sub _init_ports {
 		return undef;
 	}
 
-	$self->{'port_low'}  = $self->configData->{'ports'}->{'low'};
-	$self->{'port_high'} = $self->configData->{'ports'}->{'high'};
+	if (ref $self->configData->{'ports'} eq 'ARRAY') {
+		foreach my $pr ( @{$self->configData->{'ports'}} ) {
+			push(
+			 @{ $self->{'port_ranges'} },
+			 [ $pr->{'low'}, $pr->{'high'} ]
+			);
+		}
+	} else {
+		$self->{'port_ranges'}[0] = [ $self->configData->{'ports'}->{'low'}, $self->configData->{'ports'}->{'high'} ];
+	}
 
-	for ( $self->{'port_low'} .. $self->{'port_high'} ) {
-		$self->{'port_available'}{$_} = 1;
+	foreach my $pr (@{ $self->{'port_ranges'} }) {
+		for ( $pr->[0] .. $pr->[1] ) {
+			$self->{'port_available'}{$_} = 1;
+		}
 	}
 
 	return 1;
@@ -44,25 +56,16 @@ sub _init_ports {
 sub _next_port {
 	my $self = shift;
 
-	if (! defined($self->{'last_port'})) {
-		$self->{'last_port'} = $self->{'port_low'};
-		$self->{'port_available'}{ $self->{'last_port'} } = 0;
+	my @avail_ports = grep { $self->{'port_available'}{$_} == 1 ? $_ : undef } sort keys %{ $self->{'port_available'} };
 
-		return $self->{'port_low'};
-	} elsif ($self->{'last_port'} == $self->{'port_high'}) {
-		return undef;
-	} else {
-		my $ret = $self->{'last_port'} + 1;
-
-		if ( $self->{'port_available'}{$ret} ) {
-			$self->{'port_available'}{$ret} = 0;
-			$self->{'last_port'} = $ret;
-		} else {
-			# Next
-			$self->{'last_port'}++;
-			return $self->_next_port();
-		}
+	if (int @avail_ports) {
+		my $np = shift @avail_ports;
+		$self->{'last_port'} = $np;
+		$self->{'port_available'}{$np} = 0;
+		return $np;
 	}
+
+	return undef;
 }
 
 sub build {

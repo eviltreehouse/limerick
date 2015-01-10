@@ -15,10 +15,16 @@
 
 	"active": true,
 
-	"ports": {
-		"low": 5001,
-		"high": 5099
-	},
+	"ports": [
+		{
+			"low": 5001,
+			"high": 5099
+		},
+		{
+			"low": 6100,
+			"high": 6199
+		}
+	],
 
 	"interfaces": {
 		"any" : "0.0.0.0",
