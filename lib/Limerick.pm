@@ -1,8 +1,6 @@
 package Limerick;
 use strict;
 
-use Getopt::Long qw/GetOptionsFromArray/;
-
 require Limerick::ConfigParser;
 require Limerick::ManifestParser;
 

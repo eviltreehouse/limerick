@@ -2,6 +2,7 @@
 use strict;
 use FindBin;
 require File::Spec;
+use Getopt::Long qw/GetOptionsFromArray/;
 
 use lib "$FindBin::Bin/lib";
 require Limerick;
@@ -102,7 +103,13 @@ sub cmd_app_add {
 }
 
 sub cmd_app_new {
+	my %o;
+	_cmd_opts( 
+		'string=s' => \$o{'s'}
+	);
+
 	print "[X] Not implemented.\n";
+	print $o{'s'} . "\n";
 	return 1;
 }
 
@@ -133,5 +140,11 @@ sub cmd_build {
 	} else {
 		# We determined one wasn't needed.
 	}
+}
 
+sub _cmd_opts {
+	my @use_args = @ARGV;
+	shift @use_args;
+
+	GetOptionsFromArray(\@use_args, @_);
 }
