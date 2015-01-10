@@ -104,7 +104,7 @@ sub cmd_app_add {
 
 sub cmd_app_new {
 	my %o;
-	_cmd_opts( 
+	_cmd_opts(1, 
 		'string=s' => \$o{'s'}
 	);
 
@@ -143,8 +143,11 @@ sub cmd_build {
 }
 
 sub _cmd_opts {
+	my $shift_num = shift @_;
 	my @use_args = @ARGV;
-	shift @use_args;
+	for (1..$shift_num) {
+		shift @use_args;
+	}
 
 	GetOptionsFromArray(\@use_args, @_);
 }
