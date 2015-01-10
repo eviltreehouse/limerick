@@ -89,7 +89,7 @@ sub rewrite {
 	my $out_data;
 
 	eval {
-		$out_data = $json->pretty->encode( $self->{'struct'} );
+		$out_data = $json->pretty->canonical->encode( $self->{'struct'} );
 	};
 
 	if (! $@) {
@@ -111,7 +111,6 @@ sub clone_app {
 	if (! ref $self->struct->{'apps'}) { return undef; }
 
 	if (! $self->struct->{'apps'}->{$src} || ref $self->struct->{'apps'}->{$dest}) {
-		print "!!!";
 		return undef;
 	}
 
@@ -120,12 +119,13 @@ sub clone_app {
 	return undef unless ref $self->struct->{'apps'}->{$dest};
 
 	if (int keys %$edits) {
-		foreach my $k (%$edits) {
+		foreach my $k (keys %$edits) {
 			$self->struct->{'apps'}->{$dest}->{$k} = $edits->{$k};
 		}
 	}
 
-	return $self->rewrite();
+	#return $self->rewrite();
+	return 1;
 }
 
 1;

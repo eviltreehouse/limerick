@@ -93,20 +93,43 @@ sub build {
 		$cfg->{'shell'} = "/bin/sh";
 	}
 
+	if (! $cfg->{'interfaces'}) {
+		# Setup default interfaces pool.
+		$cfg->{'interfaces'} = {
+			'any' => '0.0.0.0',
+			'default' => 'any'
+		};
+	}
+
+	my $default_interface;
+
+	if (! $cfg->{'interfaces'}{ $cfg->{'interfaces'}{'default'} }) {
+		# Missing default, use first defined.
+		delete $cfg->{'interfaces'}{'default'};
+		my @infs = keys %{ $cfg->{'interfaces'} };
+		$default_interface = $infs[0];
+	} else {
+		$default_interface = $cfg->{'interfaces'}{'default'};
+	}
+
+	my $default_interface_host = $cfg->{'interfaces'}{ $default_interface };
+
 	print RCF $self->rc_start_header( $cfg->{'as_root'} => $cfg->{'shell'} );
 
 	foreach my $appK ( keys %{ $cfg->{'apps'} }) {
 		my $app = $cfg->{'apps'}{$appK};
-		$app->{'port'} = $self->_next_port();
-		if (! $app->{'port'}) {
-			print STDERR "[!] No port available for $appK.\n";
-			next;
-		}
 
 		if ($appK =~ m/^_/ || (! $app->{'active'})) {
 			# Skip apps beginning with _ or are non-active.
 			next;
 		} else {
+
+			$app->{'port'} = $self->_next_port();
+			if (! $app->{'port'}) {
+				print STDERR "[!] No port available for $appK.\n";
+				next;
+			}
+
 			if ($cfg->{'as_root'} && $app->{'user'}) {
 				# We can use sudo mode...
 			} else {
@@ -114,7 +137,16 @@ sub build {
 				delete $app->{'user'};
 			}
 
-			$self->{'manifest'}{$appK} = { 'port' => $app->{'port'}, 'user' => $app->{'user'} || undef };
+			if ($app->{'bind'}) {
+				$app->{'host'} = $cfg->{'interfaces'}{ $app->{'bind'} };
+				if (! $app->{'host'}) {
+					$app->{'host'} = $default_interface_host;
+				}
+			} else {
+				$app->{'host'} = $default_interface_host;
+			}
+
+			$self->{'manifest'}{$appK} = { 'host' => $app->{'host'}, 'lport' => $app->{'port'}, 'user' => $app->{'user'} || undef };
 
 			$app->{'shell'} = $cfg->{'shell'};
 			print RCF $self->rc_app_start_block( $appK => $app );
@@ -167,13 +199,13 @@ sub rc_app_start_block {
 	my $local_tmpl = <<EOT
 	 # {{app}}
 	 echo "[.] Starting {{app}}";
-	 cd {{appRoot}}/bin
+	 cd {{approot}}/bin
 	 export LIMERICK_SERVER_PORT={{port}}
 	 export LIMERICK_LAYER={{mode}}
 	 export LIMERICK_SERVER_LIB={{server}}
 {{customenv}}
 	 ./run.pl &
-	 echo \$! > {{appRoot}}/bin/tmp/run.pid
+	 echo \$! > {{approot}}/bin/tmp/run.pid
 	 unset LIMERICK_SERVER_PORT
 	 unset LIMERICK_LAYER
 	 unset LIMERICK_SERVER_LIB
@@ -184,14 +216,14 @@ EOT
 	my $sudo_tmpl = <<EOT
 	 # {{app}}
 	 echo "[.] Starting {{app}}";
-	 cd {{appRoot}}/bin
+	 cd {{approot}}/bin
 	 sudo -u {{user}} {{shell}} << CMD
 	 export LIMERICK_SERVER_PORT={{port}}
 	 export LIMERICK_LAYER={{mode}}
 	 export LIMERICK_SERVER_LIB={{server}}
 {{customenv}}
 	 ./run.pl &
-	 echo \\\$! > {{appRoot}}/bin/tmp/run.pid
+	 echo \\\$! > {{approot}}/bin/tmp/run.pid
 	 unset LIMERICK_SERVER_PORT
 	 unset LIMERICK_LAYER
 	 unset LIMERICK_SERVER_LIB
@@ -202,7 +234,7 @@ EOT
 	my $ret = $opts->{'user'} ? $sudo_tmpl : $local_tmpl;
 
 	$ret =~ s/\{\{app\}\}/$appName/g;
-	$ret =~ s/\{\{appRoot\}\}/$opts->{'appRoot'}/g;
+	$ret =~ s/\{\{approot\}\}/$opts->{'approot'}/g;
 	$ret =~ s/\{\{port\}\}/$opts->{'port'}/g;
 	$ret =~ s/\{\{mode\}\}/$opts->{'mode'}/g;
 	$ret =~ s/\{\{user\}\}/$opts->{'user'}/g;
@@ -221,7 +253,7 @@ sub rc_app_stop_block {
 
 	my $tmpl = <<EOT
 	# {{app}}
-	 kpid=\$(cat {{appRoot}}/bin/tmp/run.pid 2>/dev/null)
+	 kpid=\$(cat {{approot}}/bin/tmp/run.pid 2>/dev/null)
 	 if [ "\$?" -ne "0" ]
 	 then
 	  continue
@@ -230,7 +262,7 @@ sub rc_app_stop_block {
 	 then
 	  echo "[.] Killing {{app}} / PID \$kpid"
 	  kill \$kpid	  
-	  rm -f {{appRoot}}/bin/tmp/run.pid
+	  rm -f {{approot}}/bin/tmp/run.pid
 	 fi
 
 EOT
@@ -238,7 +270,7 @@ EOT
 
 	my $ret = $tmpl;
 	$ret =~ s/\{\{app\}\}/$appName/g;
-	$ret =~ s/\{\{appRoot\}\}/$opts->{'appRoot'}/g;
+	$ret =~ s/\{\{approot\}\}/$opts->{'approot'}/g;
 
 	return $ret;
 }
@@ -331,7 +363,7 @@ sub write_manifest {
 	my $json = new JSON();
 
 	open(MANF, ">", $manfn) or return undef;
-	print MANF $json->pretty->encode( $self->{'manifest'} );
+	print MANF $json->pretty->canonical->encode( $self->{'manifest'} );
 	close(MANF);
 
 	undef $json;

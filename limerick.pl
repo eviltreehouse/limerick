@@ -49,7 +49,7 @@ sub cmd_setup {
 }
 
 sub cmd_app_add { 
-	# Copies necessary files into appRoot to support
+	# Copies necessary files into approot to support
 	# running with Limerick...
 
 	my $app_path = $ARGV[1];
@@ -72,7 +72,7 @@ sub cmd_app_add {
 		return 1;
 	}
 
-	$app_name = lc $app_name; $app_name =~ s/[^a-z0-9_]//g;
+	$app_name = lc $app_name; $app_name =~ s/[^a-z0-9_\-\.]//g;
 
 	my $L = new Limerick();
 	
@@ -82,12 +82,20 @@ sub cmd_app_add {
 	} else {
 		print "[.] Setting up $app_name...\n";
 
-		my $cloneRet = $L->config->clone_app( '_template' => $app_name, { 'appRoot' => File::Spec->canonpath($app_path), 'description' => "Application $app_name" } );
+		my $cloneRet = $L->config->clone_app( '_template' => $app_name, 
+			{ 'approot' => File::Spec->rel2abs($app_path), 
+			  'description' => "Application $app_name",
+			  'active' => \0 
+			} 
+		);
+
 		if (! $cloneRet) {
 			print "[!] $app_name already in configuration -- or _template is missing. You will need to add by hand.\n";
 		}
 
 		return 1 if !$L->empower_app( $app_path );
+
+		$L->config->rewrite();
 
 		return 0;
 	}
@@ -109,7 +117,7 @@ sub cmd_build {
 	}
 
 	my $rc_file_name = "$FindBin::Bin/build/limerick-rc.sh";
-	my $mani_file_name = "$FindBin::Bin/build/limerick-apps.json";
+	my $mani_file_name = Limerick::_manifestFileName();
 
 	if ($L->build_rc_script( $rc_file_name, $mani_file_name )) {
 		print "[.] RC script build complete.\n";

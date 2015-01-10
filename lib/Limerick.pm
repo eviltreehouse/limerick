@@ -1,7 +1,11 @@
 package Limerick;
 use strict;
 
+use Getopt::Long qw/GetOptionsFromArray/;
+
 require Limerick::ConfigParser;
+require Limerick::ManifestParser;
+
 require Limerick::RCBuilder;
 
 my @APPFILES = (
@@ -12,13 +16,18 @@ my @APPFILES = (
 sub new {
 	my $self = bless({}, shift @_);
 
-	$self->{'config'} = $self->parse( $self->_configFileName() );
+	$self->{'config'} = $self->parse( $self->_configFileName(), 'ConfigParser' );
+	$self->{'manifest'} = $self->parse( $self->_manifestFileName(), 'ManifestParser' );
 
 	return $self;
 }
 
 sub _configFileName {
 	return "$FindBin::Bin/limerick-config.json";
+}
+
+sub _manifestFileName {
+	return "$FindBin::Bin/build/limerick-apps.json";
 }
 
 sub config {
@@ -32,8 +41,11 @@ sub configData {
 sub parse {
 	my $self = shift;
 	my $fn   = shift;
+	my $bc   = shift || "ConfigParser";
 
-	return new Limerick::ConfigParser( 'file' => $fn );
+	$bc = "Limerick\:\:$bc";
+
+	return $bc->new( 'file' => $fn );
 }
 
 sub build_rc_script {

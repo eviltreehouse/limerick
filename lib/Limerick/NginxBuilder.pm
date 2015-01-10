@@ -29,8 +29,46 @@ sub build {
 
   my @conf;
 
+  my $cfg = $self->configData;
+
+  if (! $cfg->{'interfaces'}) {
+    # Setup default interfaces pool.
+    $cfg->{'interfaces'} = {
+      'any' => '0.0.0.0',
+      'default' => 'any'
+    };
+  }
+
+  my $default_interface;
+
+  if (! $cfg->{'interfaces'}{ $cfg->{'interfaces'}{'default'} }) {
+    # Missing default, use first defined.
+    delete $cfg->{'interfaces'}{'default'};
+    my @infs = keys %{ $cfg->{'interfaces'} };
+    $default_interface = $infs[0];
+  }
+
+  my $default_interface_host = $cfg->{'interfaces'}{ $default_interface };
+
+
   foreach my $appKey ( keys %$active_apps ) {
-    push(@conf, $self->http_server_block( $active_apps->{$appKey} ));
+    my $app = $active_apps->{$appKey};
+    if ($app->{'bind'}) {
+      $app->{'fbind'} = $cfg->{'interfaces'}{$app->{'bind'}};
+      if (! $app->{'fbind'}) {
+        $app->{'fbind'} = $default_interface_host;
+      }
+    } else {
+    	$app->{'fbind'} = $default_interface_host;
+    }
+
+    $app->{'fport'} = $app->{'ssl'} ? '443' : '80';
+    $app->{'server_names'} = $self->_generateServerNameString( $app );
+    if (! $app->{'server_names'}) {
+    	$app->{'server_names'} = $appKey;
+    }
+
+    push(@conf, $self->http_server_block( $app ));
   }
 
   open(CNF, ">", $self->conf_filename) or return undef;
@@ -49,6 +87,10 @@ sub http_server_block {
   http {
     server {
       listen {{fbind}}:{{fport}};
+      server_name {{servernames}};
+
+	  location ~ /\. { return 404; }
+
       location / {
         set \$script "";
         set \$path_info \$uri;
@@ -74,14 +116,30 @@ EOT
 ;
   my $conf = $tmpl;
   $conf =~ s/\{\{app\}\}/$app->{'app'}/g;
-  $conf =~ s/\{\{fbind\}\}/0.0.0.0/g;
-  $conf =~ s/\{\{fport\}\}/80/g;
+  $conf =~ s/\{\{fbind\}\}/$app->{'fbind'}/g;
+  $conf =~ s/\{\{fport\}\}/$app->{'fport'}/g;
   $conf =~ s/\{\{lbind\}\}/127.0.0.1/g;
   $conf =~ s/\{\{lport\}\}/$app->{'port'}/g;
+  $conf =~ s/\{\{servernames\}\}/$app->{'server_names'}/g;
 
   return $conf;
 }
 
+sub _generateServerNameString {
+	my $self = shift;
+	my $app  = shift;
+
+	if (! $app->{'hostname'}) {
+		# Use appKey instead..
+		return undef;
+	} else {
+		if (ref $app->{'hostname'} eq 'ARRAY') {
+			return join(" ", @{$app->{'hostname'}});
+		} else {
+			return $app->{'hostname'};
+		}
+	}
+}
 
 1;
 

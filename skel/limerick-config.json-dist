@@ -2,8 +2,9 @@
 	"apps": 
 		{
 			"_template"  : {
-				"appRoot"     : "/path/to/poet/approot",
-				"description" : "App template -- entries starting with '_' are ignored :)",
+				"hostname"    : [ "template.com", "*.template.com" ],
+				"approot"     : "/path/to/poet/approot",
+				"description" : "App template -- apps starting with '_' are treated as 'inactive'",
 				"active"     : true,
 				"mode"       : "development",
 				"bind"       : false,
@@ -17,6 +18,11 @@
 	"ports": {
 		"low": 5001,
 		"high": 5099
+	},
+
+	"interfaces": {
+		"any" : "0.0.0.0",
+		"default" : "any"
 	},
 
 	"as_root" : false,
