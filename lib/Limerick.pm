@@ -5,6 +5,7 @@ require Limerick::ConfigParser;
 require Limerick::ManifestParser;
 
 require Limerick::RCBuilder;
+require Limerick::SourcePatcher;
 
 my @APPFILES = (
 	[ 'skel/LimerickPoweredConf.pm-dist', 'lib/LimerickPowered', 'lib/LimerickPowered/Conf.pm' ],
@@ -112,6 +113,7 @@ sub supported_frontends {
 sub empower_app {
 	my $self = shift;
 	my $app_dir = shift;
+	my $app_name = shift;
 
 	foreach my $file (@APPFILES) {
 		my $src = join("/", "$FindBin::Bin", $file->[0]);
@@ -125,6 +127,69 @@ sub empower_app {
 		return undef if $? > 0;
 
 		print "[+] $src => $dest\n";
+	}
+
+	if (-f "$app_dir/lib/$app_name/Conf.pm") {
+		my $patcher = new Limerick::SourcePatcher( "$app_dir/lib/$app_name/Conf.pm" );
+		my $pret    = $patcher->match_line("extends\\s+['\"]Poet\:\:Conf['\"]\\s*;", sub {
+			print "!MATCHER!\n";
+			my $orig = shift @_;
+			return undef if $orig =~ m/^\s*\#/;
+			return [
+				"# Limerick altered your base library",
+				"# $orig",
+				"extends 'LimerickPowered::Conf';"
+			];
+		});
+
+		if ($pret && $patcher->save()) {
+			print "[*] $app_dir/lib/$app_name/Conf.pm";
+		}
+	} else {
+		open(SRC, ">", "$app_dir/lib/$app_name/Conf.pm");
+		print SRC join("\n", 
+			"package $app_name\:\:Conf;",
+			"use strict;",
+			"use Poet\:\:Moose;",
+			"",
+			"extends 'LimerickPowered::Conf';",
+			"",
+			"1;"
+		);
+		close(SRC);
+
+		print "[+] $app_dir/lib/$app_name/Conf.pm";
+	}
+
+	if (-f "$app_dir/lib/$app_name/Server.pm") {
+		my $patcher = new Limerick::SourcePatcher( "$app_dir/lib/$app_name/Server.pm" );
+		my $pret = $patcher->match_line("extends\\s+['\"]Poet\:\:Server['\"]\\s*;", sub {
+			my $orig = shift @_;
+			return undef if $orig =~ m/^\s*\#/;
+			return [
+				"# Limerick altered your base library",
+				"# $orig",
+				"extends 'LimerickPowered::Server';"
+			];
+		});
+
+		if ($pret && $patcher->save()) {
+			print "[*] $app_dir/lib/$app_name/Server.pm";
+		}
+	} else {
+		open(SRC, ">", "$app_dir/lib/$app_name/Server.pm");
+		print SRC join("\n", 
+			"package $app_name\:\:Server;",
+			"use strict;",
+			"use Poet\:\:Moose;",
+			"",
+			"extends 'LimerickPowered::Server';",
+			"",
+			"1;"
+		);
+		close(SRC);
+
+		print "[+] $app_dir/lib/$app_name/Server.pm";		
 	}
 
 	`touch $app_dir/.limerick-powered`;

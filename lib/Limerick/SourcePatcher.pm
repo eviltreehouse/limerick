@@ -26,6 +26,7 @@ sub _load {
 
 	my @src;
 	while (<SRC>) {
+		chomp;
 		push(@src, $_);
 	}
 
@@ -55,12 +56,14 @@ sub match_line {
 
 			$edits++;
 		} else {
+			#print "[.] $l does not match $re_match\n";
 			push( @{$self->{'nsrc'}}, $l);
+			next;
 		}
-
-		$self->{'dirty'} = 1;
-		@{$self->{'src'}}   = @{ $self->{'nsrc'} };
 	}
+
+	@{$self->{'src'}}   = @{ $self->{'nsrc'} };
+	$self->{'dirty'} = $edits > 0 ? 1 : 0;
 
 	return $edits;
 }

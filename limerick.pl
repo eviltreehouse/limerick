@@ -73,6 +73,7 @@ sub cmd_app_add {
 		return 1;
 	}
 
+	my $orig_app_name = $app_name;
 	$app_name = lc $app_name; $app_name =~ s/[^a-z0-9_\-\.]//g;
 
 	my $L = new Limerick();
@@ -94,7 +95,7 @@ sub cmd_app_add {
 			print "[!] $app_name already in configuration -- or _template is missing. You will need to add by hand.\n";
 		}
 
-		return 1 if !$L->empower_app( $app_path );
+		return 1 if !$L->empower_app( $app_path, $orig_app_name );
 
 		$L->config->rewrite();
 
