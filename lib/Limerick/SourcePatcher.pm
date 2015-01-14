@@ -7,8 +7,11 @@ sub new {
 	$self->{'target'} = shift @_;
 	$self->{'dirty'}  = 0;
 	$self->{'exists'} = 0;
+	$self->{'abort'}  = 0;
+	$self->{'finish'} = 0;
 	$self->{'src'}    = [];
 	$self->{'nsrc'}   = [];
+	$self->{'set'}    = {};
 
 	$self->_load();
 	return $self;
@@ -35,16 +38,31 @@ sub _load {
 	$self->{'src'} = \@src;
 }
 
+sub set {
+	$_[0]->{'set'}{$_[1]} = $_[2];
+}
+
+sub unset_all {
+	$_[0]->{'set'} = {};
+}
+
+sub abort {
+	$_[0]->{'abort'} = 1;
+}
+
 sub match_line {
 	my $self = shift @_;
 	my $re_match = shift @_;
 	my $cb_match = shift @_;
 
+	$self->{'abort'} = 0; $self->{'finish'} = 0;
+	$self->unset_all();
+
 	my $edits = 0;
 
 	foreach my $l (@{ $self->{'src'} }) {
 		if ($l =~ m/$re_match/) {
-			my $ret = &{ $cb_match }($l);
+			my $ret = &{ $cb_match }($l, $self);
 			if (! $ret) {
 				push( @{$self->{'nsrc'}}, $l);
 				next;
@@ -55,12 +73,18 @@ sub match_line {
 			}
 
 			$edits++;
+
+			if ($self->{'abort'} || $self->{'finish'}) {
+				last;
+			}
 		} else {
 			#print "[.] $l does not match $re_match\n";
 			push( @{$self->{'nsrc'}}, $l);
 			next;
 		}
 	}
+
+	if ($self->{'abort'}) { return 0; }
 
 	@{$self->{'src'}}   = @{ $self->{'nsrc'} };
 	$self->{'dirty'} = $edits > 0 ? 1 : 0;
@@ -89,5 +113,15 @@ sub save {
 
 	return 1;
 }
+
+# Down-checker in-line MW:
+
+#  enable_if { -f $poet->bin_path("tmp/.down") } 
+#  		sub { return sub { 
+#				my $env = shift @_; 
+#				return [ 503, [ ['Content-Type', 'text/html'] ], ["We are down at the moment. Check back soon!"] ]  
+#			  } 
+#		}
+#  ;
 
 1;

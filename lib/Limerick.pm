@@ -197,5 +197,20 @@ sub empower_app {
 	return 1;
 }
 
+sub i_am_root {
+	chomp(my $un = `whoami`);
+
+	return $un == 'root' ? 1 : 0;
+}
+
+sub get_uid_gid {
+	my $self = ref $_[0] ? shift @_ : {};
+	my $un   = int @_ ? shift @_ : undef;
+	chopm($un ||= `whoami`);
+
+	my @pw = getpwnam($un);
+	return [ $pw[2], $pw[3] ];
+}
+
 
 1;
