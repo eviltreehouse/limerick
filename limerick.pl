@@ -6,6 +6,7 @@ use Getopt::Long qw/GetOptionsFromArray/;
 
 use lib "$FindBin::Bin/lib";
 require Limerick;
+use Limerick::Output;
 
 #---------------------------------------------------------------#
 # Commands:
@@ -17,11 +18,12 @@ my %commands = (
 	'setup' => \&cmd_setup,
 	'app-add'   => \&cmd_app_add,
 	'app-new'   => \&cmd_app_new,
-	'build' => \&cmd_build
+	'build' => \&cmd_build,
+	'test'  => \&cmd_test
 );
 
 if (! $commands{ lc $ARGV[0] }) {
-	print "Supported commands are: " . join(", ", sort keys %commands) . "\n";
+	cout "Supported commands are: " . join(", ", sort keys %commands) . "\n";
 	exit 1;
 } else {
 	exit &{ $commands{ lc $ARGV[0] } }( @ARGV );
@@ -32,20 +34,20 @@ sub cmd_setup {
 	my $dest_file = "$FindBin::Bin/limerick-config.json";
 
 	if (! -f $skel_file) {
-		print "[!] Skeleton configuration does not exist!\n";
+		cerr "Skeleton configuration does not exist!";
 		return 1;
 	} elsif (-f $dest_file) {
-		print "[!] limerick-config.json already exists! Move it out of the way first.\n";
+		cerr "limerick-config.json already exists! Move it out of the way first.";
 		return 1;
 	}
 
 	`cp $skel_file $dest_file 2>/dev/null`;
 	if ($? != 0) {
-		print "[!] Unable to write to $dest_file. Ensure you have permissions.\n";
+		cerr "Unable to write to $dest_file. Ensure you have permissions.";
 		return 1;
 	}
 
-	print "[.] Base configuration file written successfully.\n";
+	cout "Base configuration file written successfully.";
 	return 0;
 }
 
@@ -56,12 +58,12 @@ sub cmd_app_add {
 	my $app_path = $ARGV[1];
 
 	if (! -d $app_path) {
-		print "[!] $app_path is not a directory, or is not readable by this user.\n";
+		cerr "$app_path is not a directory, or is not readable by this user.";
 		return 1;
 	}
 
 	if (! -f "$app_path/.poet_root") {
-		print "[!] $app_path does not appear to be a valid Poet application.\n";
+		cerr "$app_path does not appear to be a valid Poet application.";
 		return 1;
 	}
 
@@ -69,7 +71,7 @@ sub cmd_app_add {
 
 	my ($app_name) = $poet_root =~ m/app_name\:\s+(.*?)$/;
 	if (! length $app_name) {
-		print "[!] Unable to determine application name!\n";
+		cerr "Unable to determine application name!";
 		return 1;
 	}
 
@@ -79,10 +81,10 @@ sub cmd_app_add {
 	my $L = new Limerick();
 	
 	if (! $L->config->success()) {
-		print "[!] Configuration file is malformed.\n";
+		cerr "Configuration file is malformed.";
 		return 1;
 	} else {
-		print "[.] Setting up $app_name...\n";
+		cout "Setting up $app_name...";
 
 		my $cloneRet = $L->config->clone_app( '_template' => $app_name, 
 			{ 'approot' => File::Spec->rel2abs($app_path), 
@@ -92,7 +94,7 @@ sub cmd_app_add {
 		);
 
 		if (! $cloneRet) {
-			print "[!] $app_name already in configuration -- or _template is missing. You will need to add by hand.\n";
+			cerr "$app_name already in configuration -- or _template is missing. You will need to add by hand.";
 		}
 
 		return 1 if !$L->empower_app( $app_path, $orig_app_name );
@@ -118,29 +120,42 @@ sub cmd_build {
 	my $L = new Limerick();
 	
 	if (! $L->config->success()) {
-		print "[!] Configuration file is malformed.\n";
+		cerr "Configuration file is malformed.";
 		return 1;
 	} else {
-		print "[.] Everything looks good.\n";
+		cout "Everything looks good.";
 	}
 
 	my $rc_file_name = "$FindBin::Bin/build/limerick-rc.sh";
 	my $mani_file_name = Limerick::_manifestFileName();
 
 	if ($L->build_rc_script( $rc_file_name, $mani_file_name )) {
-		print "[.] RC script build complete.\n";
+		cout "RC script build complete.";
 	} else {
-		print "[!] Failed to build RC script.\n";
+		cerr "Failed to build RC script.";
 	}
 
 	if (my $ret = $L->build_frontend_config()) {
-		print "[.] Frontend build complete.\n";
+		cout "Frontend build complete.";
 	} elsif( defined($ret) ) {
 		# We tried.. but we failed.
-		print "[!] Failed to build frontend configuration.\n";
+		cerr "Failed to build frontend configuration.";
 	} else {
 		# We determined one wasn't needed.
 	}
+}
+
+sub cmd_test {
+	my $app;
+	my %opts = _cmd_opts(1, "app=s" => \$app);
+
+	if (-e $app) {
+		print Limerick::get_app_user($app);
+	} else {
+		cexp "X", "no $app!";
+	}
+
+	return 0;
 }
 
 sub _cmd_opts {

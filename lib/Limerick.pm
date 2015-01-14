@@ -4,8 +4,11 @@ use strict;
 require Limerick::ConfigParser;
 require Limerick::ManifestParser;
 
+use Limerick::Output;
+
 require Limerick::RCBuilder;
 require Limerick::SourcePatcher;
+require File::Spec;
 
 my @APPFILES = (
 	[ 'skel/LimerickPoweredConf.pm-dist', 'lib/LimerickPowered', 'lib/LimerickPowered/Conf.pm' ],
@@ -100,7 +103,7 @@ sub build_frontend_config {
 			# Don't care.
 			return undef;
 		} else {
-			print "[!] " . $self->{'configData'}{'frontend'} . " is not a supported frontend!\n";
+			cerr "[!] " . $self->{'configData'}{'frontend'} . " is not a supported frontend!";
 			return 0;
 		}
 	}
@@ -132,7 +135,7 @@ sub empower_app {
 	if (-f "$app_dir/lib/$app_name/Conf.pm") {
 		my $patcher = new Limerick::SourcePatcher( "$app_dir/lib/$app_name/Conf.pm" );
 		my $pret    = $patcher->match_line("extends\\s+['\"]Poet\:\:Conf['\"]\\s*;", sub {
-			print "!MATCHER!\n";
+			#print "!MATCHER!\n";
 			my $orig = shift @_;
 			return undef if $orig =~ m/^\s*\#/;
 			return [
@@ -143,7 +146,7 @@ sub empower_app {
 		});
 
 		if ($pret && $patcher->save()) {
-			print "[*] $app_dir/lib/$app_name/Conf.pm";
+			cexp "*", "$app_dir/lib/$app_name/Conf.pm";
 		}
 	} else {
 		open(SRC, ">", "$app_dir/lib/$app_name/Conf.pm");
@@ -158,7 +161,7 @@ sub empower_app {
 		);
 		close(SRC);
 
-		print "[+] $app_dir/lib/$app_name/Conf.pm";
+		cnotify "$app_dir/lib/$app_name/Conf.pm";
 	}
 
 	if (-f "$app_dir/lib/$app_name/Server.pm") {
@@ -174,7 +177,7 @@ sub empower_app {
 		});
 
 		if ($pret && $patcher->save()) {
-			print "[*] $app_dir/lib/$app_name/Server.pm";
+			cexp "*", "$app_dir/lib/$app_name/Server.pm";
 		}
 	} else {
 		open(SRC, ">", "$app_dir/lib/$app_name/Server.pm");
@@ -189,7 +192,7 @@ sub empower_app {
 		);
 		close(SRC);
 
-		print "[+] $app_dir/lib/$app_name/Server.pm";		
+		cnotify "$app_dir/lib/$app_name/Server.pm";		
 	}
 
 	`touch $app_dir/.limerick-powered`;
@@ -210,6 +213,21 @@ sub get_uid_gid {
 
 	my @pw = getpwnam($un);
 	return [ $pw[2], $pw[3] ];
+}
+
+sub get_app_user {
+	return scalar getpwuid( get_app_uid(@_) );
+}
+
+sub get_app_uid {
+	my $self = ref $_[0] ? shift @_ : {};
+	my $app_path = shift @_;
+
+	my @st = stat(File::Spec->catfile($app_path, 'bin', 'run.pl'));
+	if (! int @st) { return undef; }
+
+	my $uid = $st[4];
+	return $uid;
 }
 
 
