@@ -82,7 +82,7 @@ sub all_apps {
 	my %ret;
 
 	foreach my $appKey (keys %{ $self->apps }) {
-		next if $appKey =~ m/^_template$/;
+		next if $appKey =~ m/^_template/;
 
 		$ret{$appKey} = $self->apps->{$appKey};
 	}

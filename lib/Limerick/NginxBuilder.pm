@@ -46,6 +46,8 @@ sub build {
     delete $cfg->{'interfaces'}{'default'};
     my @infs = keys %{ $cfg->{'interfaces'} };
     $default_interface = $infs[0];
+  } else {
+  	$default_interface = $cfg->{'interfaces'}{'default'};
   }
 
   my $default_interface_host = $cfg->{'interfaces'}{ $default_interface };
@@ -68,7 +70,9 @@ sub build {
     	$app->{'server_names'} = $appKey;
     }
 
-    push(@conf, $self->http_server_block( $app ));
+    $app->{'app'} = $appKey;
+
+    push(@conf, $app->{'ssl'} ? $self->https_server_block( $app ) : $self->http_server_block( $app ));
   }
 
   open(CNF, ">", $self->conf_filename) or return undef;
@@ -114,16 +118,71 @@ sub http_server_block {
 
 EOT
 ;
-  my $conf = $tmpl;
-  $conf =~ s/\{\{app\}\}/$app->{'app'}/g;
-  $conf =~ s/\{\{fbind\}\}/$app->{'fbind'}/g;
-  $conf =~ s/\{\{fport\}\}/$app->{'fport'}/g;
-  $conf =~ s/\{\{lbind\}\}/127.0.0.1/g;
-  $conf =~ s/\{\{lport\}\}/$app->{'port'}/g;
-  $conf =~ s/\{\{servernames\}\}/$app->{'server_names'}/g;
 
-  return $conf;
+	return _interp_block($tmpl, $app);
 }
+
+sub https_server_block {
+  my $app = $_[1];
+
+  my $tmpl = <<EOT
+
+  # {{app}}
+  http {
+    server {
+      listen {{fbind}}:{{fport}};
+      server_name {{servernames}};
+
+	  location ~ /\. { return 404; }
+
+	  ssl on
+	  ssl_certificate {{cert}}
+	  ssl_certificate_key {{cert_key}}
+
+      location / {
+        set \$script "";
+        set \$path_info \$uri;
+        fastcgi_pass {{lbind}}:{{lport}};
+        fastcgi_param  SCRIPT_NAME      \$script;
+        fastcgi_param  PATH_INFO        \$path_info;
+        fastcgi_param  QUERY_STRING     \$query_string;
+        fastcgi_param  REQUEST_METHOD   \$request_method;
+        fastcgi_param  CONTENT_TYPE     \$content_type;
+        fastcgi_param  CONTENT_LENGTH   \$content_length;
+        fastcgi_param  REQUEST_URI      \$request_uri;
+        fastcgi_param  SERVER_PROTOCOL  \$server_protocol;
+        fastcgi_param  REMOTE_ADDR      \$remote_addr;
+        fastcgi_param  REMOTE_PORT      \$remote_port;
+        fastcgi_param  SERVER_ADDR      \$server_addr;
+        fastcgi_param  SERVER_PORT      \$server_port;
+        fastcgi_param  SERVER_NAME      \$server_name;
+      }
+    }
+  }
+
+EOT
+;
+
+  return _interp_block($tmpl, $app);
+}
+
+sub _interp_block {
+	my $conf = shift @_;
+	my $app  = shift @_;
+
+	$conf =~ s/\{\{app\}\}/$app->{'app'}/g;
+	$conf =~ s/\{\{fbind\}\}/$app->{'fbind'}/g;
+	$conf =~ s/\{\{fport\}\}/$app->{'fport'}/g;
+	$conf =~ s/\{\{lbind\}\}/127.0.0.1/g;
+	$conf =~ s/\{\{lport\}\}/$app->{'port'}/g;
+	$conf =~ s/\{\{servernames\}\}/$app->{'server_names'}/g;
+
+	$conf =~ s/\{\{cert\}\}/$app->{'ssl_certificate'}/g;
+	$conf =~ s/\{\{cert_key\}\}/$app->{'ssl_certificate_key'}/g;
+
+	return $conf;	
+}
+
 
 sub _generateServerNameString {
 	my $self = shift;

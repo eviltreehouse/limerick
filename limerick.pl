@@ -216,8 +216,7 @@ sub cmd_app_list {
 		return 1;
 	}
 
-	foreach my $appK (sort keys $L->configData->{'apps'}) {
-		next if $appK eq '_template';
+	foreach my $appK (sort keys $L->all_apps) {
 		my $appc = $L->configData->{'apps'}{$appK};
 
 		cnotify "$appK => " . $appc->{'active'} ? "Active" : "Inactive";
