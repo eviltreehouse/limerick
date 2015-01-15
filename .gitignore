@@ -2,7 +2,7 @@
 limerick-config.json
 apps.list
 ports.list
-site1/
+site*/
 limerick-rc.sh
 limerick-apps.json
 limerick-nginx.conf

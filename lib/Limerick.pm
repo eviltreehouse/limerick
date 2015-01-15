@@ -134,7 +134,7 @@ sub empower_app {
 			return undef;
 		}
 	} else {
-		cout "I am ROOT: support files will be CHOWNd to '" . $app_user . "'";
+		cout "I am ROOT: support files will be CHOWNd to '" . $app_user . ":$app_grp'";
 	}
 
 	foreach my $file (@APPFILES) {
@@ -230,11 +230,15 @@ sub empower_app {
 
 	`touch $app_dir/.limerick-powered`;
 
+	if ($self->{'root'}) {
+		`chown $app_user:$app_grp $app_dir/.limerick-powered`;
+	}
+
 	return 1;
 }
 
 sub i_am_root {
-	return whoami() == 'root' ? 1 : 0;
+	return whoami() eq 'root' ? 1 : 0;
 }
 
 sub whoami {

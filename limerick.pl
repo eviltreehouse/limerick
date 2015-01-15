@@ -22,7 +22,7 @@ my %commands = (
 	'test'  => \&cmd_test
 );
 
-if (! $commands{ lc $ARGV[0] }) {
+if (! $commands{ lc $ARGV[0] } || (lc $ARGV[0] =~ m/^-?-?help/)) {
 	print "limerick version " . $Limerick::VERSION . "\n";
 	cout "Supported commands are: " . join(", ", sort keys %commands) . "\n";
 	exit 1;
@@ -58,6 +58,17 @@ sub cmd_app_add {
 
 	my $app_path = $ARGV[1];
 
+	my @domain;
+	my %opts = (
+		'domain=s' => \@domain
+	);
+
+	if (ref $_[0]) {
+		_cmd_opts(0, shift @_, %opts);
+	} else {
+		_cmd_opts(2, %opts);
+	}
+
 	if (! -d $app_path) {
 		cerr "$app_path is not a directory, or is not readable by this user.";
 		return 1;
@@ -87,12 +98,20 @@ sub cmd_app_add {
 	} else {
 		cout "Setting up $app_name...";
 
-		my $cloneRet = $L->config->clone_app( '_template' => $app_name, 
-			{ 'approot' => File::Spec->rel2abs($app_path), 
+		my $overrides = { 'approot' => File::Spec->rel2abs($app_path), 
 			  'description' => "Application $app_name",
 			  'active' => \0 
-			} 
-		);
+		}; 
+
+		if (int @domain) {
+			if (int @domain == 1) {
+				$overrides->{'hostname'} = $domain[0];
+			} else {
+				$overrides->{'hostname'} = \@domain;
+			}
+		}
+
+		my $cloneRet = $L->config->clone_app( '_template' => $app_name, $overrides );
 
 		if (! $cloneRet) {
 			cerr "$app_name already in configuration -- or _template is missing. You will need to add by hand.";
@@ -107,14 +126,28 @@ sub cmd_app_add {
 }
 
 sub cmd_app_new {
-	my %o;
-	_cmd_opts(1, 
-		'string=s' => \$o{'s'}
+	my $app_path = $ARGV[1];
+	my @domain;
+
+	my @O = _cmd_opts(2, 
+		'domain=s' => \@domain
 	);
 
-	print "[X] Not implemented.\n";
-	print $o{'s'} . "\n";
-	return 1;
+	if (-e $app_path) {
+		cerr "$app_path already exists on your filesystem!";
+		return 1;
+	}
+
+	cout "Running 'poet new'...";
+	my @poet_out = `poet new $app_path`;
+	if ($? == 0) {
+		cout "poet returned OK. Running 'limerick app-add'...";
+		return cmd_app_add(\@O);
+	} else {
+		cerr "poet returned NOT OK:";
+		print map { "[*] $_"; } @poet_out;
+		return 1;
+	}
 }
 
 sub cmd_build {
@@ -161,10 +194,20 @@ sub cmd_test {
 
 sub _cmd_opts {
 	my $shift_num = shift @_;
-	my @use_args = @ARGV;
-	for (1..$shift_num) {
-		shift @use_args;
+	my @use_args;
+	if (ref $_[0] eq 'ARRAY') {
+		@use_args = @{ shift @_ };
+	} else {
+		@use_args = @ARGV;
+
+		for (1..$shift_num) {
+			shift @use_args;
+		}
 	}
 
+	my @used = @use_args;
+
 	GetOptionsFromArray(\@use_args, @_);
+
+	return @used;
 }
