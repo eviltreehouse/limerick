@@ -18,6 +18,9 @@ my %commands = (
 	'setup' => \&cmd_setup,
 	'app-add'   => \&cmd_app_add,
 	'app-new'   => \&cmd_app_new,
+	'app-on' => \&cmd_app_activate,
+	'app-off' => \&cmd_app_deactivate,
+	'app-list' => \&cmd_app_list,
 	'build' => \&cmd_build,
 	'test'  => \&cmd_test
 );
@@ -50,6 +53,61 @@ sub cmd_setup {
 
 	cout "Base configuration file written successfully.";
 	return 0;
+}
+
+sub cmd_app_activate {
+	my $app = $ARGV[1];
+
+	my $L = new Limerick();
+	
+	if (! $L->config->success()) {
+		cerr "Configuration file is malformed.";
+		return 1;
+	}
+
+	my $appc = $L->config->for_app($app);
+	if (! defined $appc->{'approot'}) {
+		cerr "Unable to find '$app'";
+		cnotify "Available apps: " . join(", ", keys %{ $L->all_apps });
+		return 1;
+	} else {
+		$appc->{'active'} = \1;
+		if ($L->config->rewrite()) {
+			cnotify "$app => ON";
+			return 0;
+		} else {
+			cerr "$app toggle failed.";
+			return 1;
+		}
+	}
+}
+
+sub cmd_app_deactivate {
+	my $app = $ARGV[1];
+
+	my $L = new Limerick();
+	
+	if (! $L->config->success()) {
+		cerr "Configuration file is malformed.";
+		return 1;
+	}
+
+	my $appc = $L->config->for_app($app);
+	if (! defined $appc->{'approot'}) {
+		cerr "Unable to find '$app'";
+		cnotify "Available apps: " . join(", ", keys %{ $L->all_apps });
+		return 1;
+	} else {
+		$appc->{'active'} = \0;
+		if ($L->config->rewrite()) {
+			cnotify "$app => OFF";
+			return 0;
+		} else {
+			cerr "$app toggle failed.";
+			return 1;
+		}
+
+	}
 }
 
 sub cmd_app_add { 
@@ -148,6 +206,24 @@ sub cmd_app_new {
 		print map { "[*] $_"; } @poet_out;
 		return 1;
 	}
+}
+
+sub cmd_app_list {
+	my $L = new Limerick();
+	
+	if (! $L->config->success()) {
+		cerr "Configuration file is malformed.";
+		return 1;
+	}
+
+	foreach my $appK (sort keys $L->configData->{'apps'}) {
+		next if $appK eq '_template';
+		my $appc = $L->configData->{'apps'}{$appK};
+
+		cnotify "$appK => " . $appc->{'active'} ? "Active" : "Inactive";
+	}
+
+	return 0;
 }
 
 sub cmd_build {

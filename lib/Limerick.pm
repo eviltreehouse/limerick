@@ -77,6 +77,19 @@ sub active_apps {
 	return \%ret;
 }
 
+sub all_apps {
+	my $self = shift;
+	my %ret;
+
+	foreach my $appKey (keys %{ $self->apps }) {
+		next if $appKey =~ m/^_template$/;
+
+		$ret{$appKey} = $self->apps->{$appKey};
+	}
+
+	return \%ret;	
+}
+
 sub build_frontend_config {
 	my $self = shift;
 

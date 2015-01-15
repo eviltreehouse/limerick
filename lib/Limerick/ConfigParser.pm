@@ -102,6 +102,13 @@ sub rewrite {
 	}
 }
 
+sub for_app {
+	my $self = shift;
+	my $tag  = shift;
+
+	return ref $self->struct->{'apps'}{$tag} ? $self->struct->{'apps'}{$tag} : {};
+}
+
 sub clone_app {
 	my $self = shift;
 	my $src  = shift;
