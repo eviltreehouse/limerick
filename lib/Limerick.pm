@@ -1,4 +1,4 @@
-package Limerick;
+package Limerick 0.9;
 use strict;
 
 require Limerick::ConfigParser;
@@ -20,6 +20,8 @@ sub new {
 
 	$self->{'config'} = $self->parse( $self->_configFileName(), 'ConfigParser' );
 	$self->{'manifest'} = $self->parse( $self->_manifestFileName(), 'ManifestParser' );
+
+	$self->{'root'} = i_am_root();
 
 	return $self;
 }
@@ -118,6 +120,23 @@ sub empower_app {
 	my $app_dir = shift;
 	my $app_name = shift;
 
+	my $app_user = get_app_user($app_dir);
+	my $app_grp  = get_app_group($app_dir);
+
+	if ( ! $self->{'root'} ) {
+		if (! -w $app_dir) {
+			cerr "$app_dir is not writable by current user.";
+			return undef;
+		}
+
+		if (! -w "$app_dir/lib/$app_name") {
+			cerr "$app_dir/lib/$app_name is not writable by current user.";
+			return undef;
+		}
+	} else {
+		cout "I am ROOT: support files will be CHOWNd to '" . $app_user . "'";
+	}
+
 	foreach my $file (@APPFILES) {
 		my $src = join("/", "$FindBin::Bin", $file->[0]);
 		my $destdir = join("/", $app_dir, $file->[1]);
@@ -126,8 +145,18 @@ sub empower_app {
 		`mkdir -p $destdir`;
 		return undef if $? > 0;
 
+		if ($self->{'root'}) {
+			`chown $app_user:$app_grp $destdir`;
+			return undef if $? > 0;
+		}
+
 		`cp $src $dest 2>/dev/null`;
 		return undef if $? > 0;
+
+		if ($self->{'root'}) {
+			`chown $app_user:$app_grp $dest`;
+			return undef if $? > 0;
+		}
 
 		print "[+] $src => $dest\n";
 	}
@@ -161,6 +190,8 @@ sub empower_app {
 		);
 		close(SRC);
 
+		`chown $app_user:$app_grp $app_dir/lib/$app_name/Conf.pm`;
+
 		cnotify "$app_dir/lib/$app_name/Conf.pm";
 	}
 
@@ -192,6 +223,8 @@ sub empower_app {
 		);
 		close(SRC);
 
+		`chown $app_user:$app_grp $app_dir/lib/$app_name/Server.pm`;
+
 		cnotify "$app_dir/lib/$app_name/Server.pm";		
 	}
 
@@ -201,15 +234,17 @@ sub empower_app {
 }
 
 sub i_am_root {
-	chomp(my $un = `whoami`);
+	return whoami() == 'root' ? 1 : 0;
+}
 
-	return $un == 'root' ? 1 : 0;
+sub whoami {
+	return scalar getpwuid($<);
 }
 
 sub get_uid_gid {
 	my $self = ref $_[0] ? shift @_ : {};
 	my $un   = int @_ ? shift @_ : undef;
-	chopm($un ||= `whoami`);
+	chomp($un ||= whoami());
 
 	my @pw = getpwnam($un);
 	return [ $pw[2], $pw[3] ];
@@ -219,15 +254,30 @@ sub get_app_user {
 	return scalar getpwuid( get_app_uid(@_) );
 }
 
+sub get_app_group {
+	return scalar getgrgid( get_app_gid(@_) );
+}
+
 sub get_app_uid {
 	my $self = ref $_[0] ? shift @_ : {};
 	my $app_path = shift @_;
 
-	my @st = stat(File::Spec->catfile($app_path, 'bin', 'run.pl'));
+	my @st = stat(File::Spec->catfile($app_path, '.poet_root'));
 	if (! int @st) { return undef; }
 
 	my $uid = $st[4];
 	return $uid;
+}
+
+sub get_app_gid {
+	my $self = ref $_[0] ? shift @_ : {};
+	my $app_path = shift @_;
+
+	my @st = stat(File::Spec->catfile($app_path, '.poet_root'));
+	if (! int @st) { return undef; }
+
+	my $gid = $st[5];
+	return $gid;	
 }
 
 

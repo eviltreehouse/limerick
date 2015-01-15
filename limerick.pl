@@ -23,6 +23,7 @@ my %commands = (
 );
 
 if (! $commands{ lc $ARGV[0] }) {
+	print "limerick version " . $Limerick::VERSION . "\n";
 	cout "Supported commands are: " . join(", ", sort keys %commands) . "\n";
 	exit 1;
 } else {
