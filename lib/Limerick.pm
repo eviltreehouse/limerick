@@ -112,7 +112,8 @@ sub build_frontend_config {
 		if ($@) { return 0; }
 		if (! ref $builder) { return 0; }
 
-		return $builder->build( $self->active_apps ) ? 1 : 0;
+		my $ret = $builder->build( $self->active_apps );
+		return $ret ? $ret : 0;
 	} else {
 		if (! $self->{'configData'}->{'frontend'}) {
 			# Don't care.

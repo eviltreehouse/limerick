@@ -79,7 +79,7 @@ sub build {
   print CNF join("\n", @conf);
   close(CNF);
 
-  return 1;
+  return $self->conf_filename;
 }
 
 sub http_server_block {
