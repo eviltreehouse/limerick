@@ -6,6 +6,7 @@ sub new {
 
 	$self->{'target'} = shift @_;
 	$self->{'dirty'}  = 0;
+	$self->{'safe'}   = 0;
 	$self->{'exists'} = 0;
 	$self->{'abort'}  = 0;
 	$self->{'finish'} = 0;
@@ -17,25 +18,49 @@ sub new {
 	return $self;
 }
 
-sub exists {
+sub file_exists {
 	return $_[0]->{'exists'};
+}
+
+sub loaded {
+	return int $_[0]->{'src'} > 0 ? 1 : 0;
 }
 
 sub _load {
 	my $self = shift @_;
 
-	open(SRC, "<", $self->{'target'}) or return;
-	$self->{'exists'} = 1;
-
-	my @src;
-	while (<SRC>) {
-		chomp;
-		push(@src, $_);
+	if (ref $self->{'target'} eq 'HASH') {
+		my $rset = $self->{'target'};
+		$self->{'target'} = $rset->{'source'};
+		$self->{'safe'}   = $rset->{'safe'};
 	}
 
-	close(SRC);
+	if (! ref $self->{'target'}) {
+		open(SRC, "<", $self->{'target'}) or return;
+		$self->{'exists'} = 1;
 
-	$self->{'src'} = \@src;
+		my @src;
+		while (<SRC>) {
+			chomp;
+			push(@src, $_);
+		}
+
+		close(SRC);
+
+		$self->{'src'} = \@src;
+
+		if ($self->{'safe'}) {
+			# Makes sure we don't accidently 'patch over' the source.
+			# Useful for making skel alerations.
+			undef $self->{'safe'};
+			undef $self->{'target'};
+			undef $self->{'exists'};
+		}
+	} elsif (ref $self->{'target'} eq 'ARRAY') {
+		my @copy = @{ $self->{'target'} };
+		$self->{'target'} = undef;
+		$self->{'src'}    = \@copy;
+	}
 }
 
 sub set {
@@ -96,10 +121,14 @@ sub save {
 	my $self = shift @_;
 	my $target_fn = int @_ ? shift @_ : $self->{'target'};
 
-	# No edits made..
-	if (! $self->{'dirty'}) { return 0; }
+	if (! $target_fn) {
+		return undef;
+	}
 
-	if (! -w $target_fn) {
+	# No edits made..
+	if ( (! $self->{'dirty'}) && $self->file_exists) { return 0; }
+
+	if ((! -w $target_fn) && $self->file_exists) {
 		return undef;
 	} else {
 		open(SRC, ">", $target_fn) or return undef;

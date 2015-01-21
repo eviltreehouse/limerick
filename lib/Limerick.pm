@@ -279,39 +279,25 @@ sub empower_app {
 	if (-f "$app_dir/lib/$app_name/DBHandle.pm") {
 		# Skip it...
 	} else {
-		open(SRC, ">", "$app_dir/lib/$app_name/DBHandle.pm");
-		print SRC <<SRCCODE
-package $app_name\:\:DBHandle;
-use strict;
-use Poet qw/\$poet \$conf/;
+		my $patcher = new Limerick::SourcePatcher( { 'source' => "$FindBin::Bin/skel/AppDBHandle.pm-dist", 'safe' => 1 } );
+		if (! $patcher->loaded()) {
+			cwarn "Cannot open AppDBHandle.pm-dist skel file!";
+			return undef;
+		}
 
-require DBI;
-my \$DBH;
+		my $pret = $patcher->match_line('\s*package\s+', sub {
+			return "package $app_name\:\:DBHandle;";
+		});
 
-sub new {
-	if (ref \$DBH && \$DBH->ping) { return \$DBH; }
-	my \$target = \$conf->get('database.hostname') || \$conf->get('database.socket');
-	my \@dsn = ('dbi', \$conf->get('database.engine'), \$conf->get('database.database'), \$target);
-	\$DBH = DBI->connect(join(':', \@dsn), \$conf->get_secure('database.username'), _get_db_passwd()
-			, { RaiseError => 0, PrintError => 0 });
-	return \$DBH;
-}
+		my $dest = "$app_dir/lib/$app_name/DBHandle.pm";
 
-sub disconnect {
-	\$DBH->disconnect; \$DBH = undef; return $_[0];
-}
-
-sub _get_db_passwd {
-	return \$conf->get_secure('database.password');
-}
-1;
-SRCCODE
-;
-		close(SRC);
-
-		`chown $app_user:$app_grp $app_dir/lib/$app_name/DBHandle.pm`;
-
-		cnotify "$app_dir/lib/$app_name/DBHandle.pm";		
+		if ($pret && $patcher->save($dest)) {
+			cnotify $dest;	
+			`chown $app_user:$app_grp $dest`;
+		} else {
+			cwarn "$dest";
+			return undef;
+		}		
 	}
 
 	`touch $app_dir/.limerick-powered`;
