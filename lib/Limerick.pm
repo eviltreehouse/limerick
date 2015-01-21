@@ -13,6 +13,7 @@ require File::Spec;
 my @APPFILES = (
 	[ 'skel/LimerickPoweredConf.pm-dist', 'lib/LimerickPowered', 'lib/LimerickPowered/Conf.pm' ],
 	[ 'skel/LimerickPoweredServer.pm-dist', 'lib/LimerickPowered', 'lib/LimerickPowered/Server.pm' ],
+	[ 'skel/LimerickPoweredImport.pm-dist', 'lib/LimerickPowered', 'lib/LimerickPowered/Import.pm' ],
 );
 
 sub new {
@@ -240,6 +241,77 @@ sub empower_app {
 		`chown $app_user:$app_grp $app_dir/lib/$app_name/Server.pm`;
 
 		cnotify "$app_dir/lib/$app_name/Server.pm";		
+	}
+
+	if (-f "$app_dir/lib/$app_name/Import.pm") {
+		my $patcher = new Limerick::SourcePatcher( "$app_dir/lib/$app_name/Import.pm" );
+		my $pret = $patcher->match_line("extends\\s+['\"]Poet\:\:Import['\"]\\s*;", sub {
+			my $orig = shift @_;
+			return undef if $orig =~ m/^\s*\#/;
+			return [
+				"# Limerick altered your base library",
+				"# $orig",
+				"extends 'LimerickPowered::Import';"
+			];
+		});
+
+		if ($pret && $patcher->save()) {
+			cexp "*", "$app_dir/lib/$app_name/Import.pm";
+		}
+	} else {
+		open(SRC, ">", "$app_dir/lib/$app_name/Import.pm");
+		print SRC join("\n", 
+			"package $app_name\:\:Import;",
+			"use strict;",
+			"use Poet\:\:Moose;",
+			"",
+			"extends 'LimerickPowered::Import';",
+			"",
+			"1;"
+		);
+		close(SRC);
+
+		`chown $app_user:$app_grp $app_dir/lib/$app_name/Import.pm`;
+
+		cnotify "$app_dir/lib/$app_name/Import.pm";		
+	}
+
+	if (-f "$app_dir/lib/$app_name/DBHandle.pm") {
+		# Skip it...
+	} else {
+		open(SRC, ">", "$app_dir/lib/$app_name/DBHandle.pm");
+		print SRC <<SRCCODE
+package $app_name\:\:DBHandle;
+use strict;
+use Poet qw/\$poet \$conf/;
+
+require DBI;
+my \$DBH;
+
+sub new {
+	if (ref \$DBH && \$DBH->ping) { return \$DBH; }
+	my \$target = \$conf->get('database.hostname') || \$conf->get('database.socket');
+	my \@dsn = ('dbi', \$conf->get('database.engine'), \$conf->get('database.database'), \$target);
+	\$DBH = DBI->connect(join(':', \@dsn), \$conf->get_secure('database.username'), _get_db_passwd()
+			, { RaiseError => 0, PrintError => 0 });
+	return \$DBH;
+}
+
+sub disconnect {
+	\$DBH->disconnect; \$DBH = undef; return $_[0];
+}
+
+sub _get_db_passwd {
+	return \$conf->get_secure('database.password');
+}
+1;
+SRCCODE
+;
+		close(SRC);
+
+		`chown $app_user:$app_grp $app_dir/lib/$app_name/DBHandle.pm`;
+
+		cnotify "$app_dir/lib/$app_name/DBHandle.pm";		
 	}
 
 	`touch $app_dir/.limerick-powered`;

@@ -1,0 +1,12 @@
+package LimerickPowered::Import;
+use strict;
+
+use Poet::Moose;
+extends 'Poet::Import';
+
+method provide_var_dbh ($caller) {
+	return $self->env->app_class('DBHandle')->new();
+};
+
+
+1;
