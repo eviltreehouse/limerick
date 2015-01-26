@@ -9,7 +9,11 @@
 				"mode"       : "development",
 				"bind"       : false,
 				"user"       : false,
-				"server"     : "Starlet"
+				"server"     : "Starlet",
+				"permissions" : [
+					{ "directory" : "logs", "chown": false, "chmod": "0770" },
+					{ "directory" : "data", "chown": false, "chmod": "0774" },
+				]
 			}
 		},
 

@@ -21,6 +21,7 @@ my %commands = (
 	'app-on' => \&cmd_app_activate,
 	'app-off' => \&cmd_app_deactivate,
 	'app-list' => \&cmd_app_list,
+	'app-status' => \&cmd_app_status,
 	'build' => \&cmd_build,
 	'test'  => \&cmd_test
 );
@@ -53,6 +54,40 @@ sub cmd_setup {
 
 	cout "Base configuration file written successfully.";
 	return 0;
+}
+
+sub cmd_app_status {
+	my $app = $ARGV[1];
+
+	if (my $L = _startupAndParse()) {
+		my $appc = $L->config->for_app($app);
+		if (! defined $appc->{'approot'}) {
+			cerr "Unable to find '$app'";
+			cnotify "Available apps: " . join(", ", keys %{ $L->all_apps });
+			return 1; 
+		} else {
+			my $pidfile = File::Spec->catfile($appc->{'approot'}, 'bin', 'tmp', 'run.pid');
+			if (! -r $pidfile) {
+				print "Offline\n";
+				return 0;
+			} else {
+				open(PIDF, "<", $pidfile);
+				chomp(my $pid = <PIDF>);
+				close(PIDF);
+
+				if ($L->get_app_user($app) == $L->whoami() || $L->i_am_root()) {
+					my $ret = kill(0, $pid);
+					print $ret ? "Online\n" : "Offline\n";
+					return 0;
+				} else {
+					cerr "Not proper user to check status of this application!";
+					return 1;
+				}
+			}
+		}
+	} else {
+		return 1;
+	}
 }
 
 sub cmd_app_activate {
@@ -219,7 +254,7 @@ sub cmd_app_list {
 	foreach my $appK (sort keys %{ $L->all_apps }) {
 		my $appc = $L->configData->{'apps'}{$appK};
 
-		cnotify "$appK => " . $appc->{'active'} ? "Active" : "Inactive";
+		cnotify "$appK => " . ($appc->{'active'} && $appK !~ m/^_/ ? "Active" : "Inactive");
 	}
 
 	return 0;
@@ -266,6 +301,17 @@ sub cmd_test {
 	}
 
 	return 0;
+}
+
+sub _startupAndParse {
+	my $L = new Limerick();
+	if (! $L->config->success()) {
+		cerr "Configuration file is malformed.";
+		return undef;
+	} else {
+		#cout "Everything looks good.";
+		return $L;
+	}
 }
 
 sub _cmd_opts {

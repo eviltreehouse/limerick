@@ -1,6 +1,7 @@
 package Limerick::RCBuilder;
 use strict;
 
+require File::Spec;
 require JSON;
 
 sub new {
@@ -147,6 +148,50 @@ sub build {
 				}
 			} else {
 				$app->{'host'} = $default_interface_host;
+			}
+
+			if (ref $app->{'permissions'}) {
+				my @perms;
+				if (ref $app->{'permissions'} eq 'HASH') {
+					push (@perms, $app->{'permissions'});
+				} elsif (ref $app->{'permissions'} eq 'ARRAY') {
+					push (@perms, @{ $app->{'permissions'}});
+				}
+
+				print RCF "\t# $appK Permissions Settings\n";
+				foreach my $perm (@perms) {
+					next unless $perm->{'directory'};
+
+					# Don't permit anything lower than app-root...
+					$perm->{'directory'} =~ s/\.\././g;
+
+					my $target = File::Spec->catdir($app->{'approot'}, $perm->{'directory'});
+					my $user = $app->{'user'} ? $app->{'user'} : undef;
+
+					my $recursive = ($perm->{'recurse'} || $perm->{'recursive'}) ? "-R" : "";
+
+					if ($perm->{'chown'}) {
+						if ($user) {
+							print RCF "\tchown $recursive $user $target 2>/dev/null\n";
+						}
+					}
+
+					if ($perm->{'chgrp'}) {
+						my $grp = $perm->{'chgrp'};
+						$grp =~ s/[^0-9A-Z_]//g;
+						if ($user) {
+							print RCF "\tchgrp $recursive $grp $target 2>/dev/null\n";
+						}
+					}
+
+					if ($perm->{'chmod'}) {
+						my $chmod = $perm->{'chmod'};
+						$chmod =~ s/[^0-9ugosrwx\+\-]//g;
+						print RCF "\tchmod $recursive $chmod $target 2>/dev/null\n";
+					}
+				}
+
+				print RCF "\t\#\n\n";
 			}
 
 			$self->{'manifest'}{$appK} = { 'host' => $app->{'host'}, 'lport' => $app->{'port'}, 'user' => $app->{'user'} || undef };
