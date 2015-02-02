@@ -128,6 +128,10 @@ sub build {
 			next;
 		} else {
 
+			my $arcf = _get_apprc_fn( $rcfn => "app.$appK" );
+			open(ARCF, ">", $arcf) or return undef;
+			print ARCF $self->rc_start_header( $cfg->{'as_root'} => $cfg->{'shell'} );
+
 			$app->{'port'} = $self->_next_port();
 			if (! $app->{'port'}) {
 				print STDERR "[!] No port available for $appK.\n";
@@ -159,6 +163,7 @@ sub build {
 				}
 
 				print RCF "\t# $appK Permissions Settings\n";
+				print ARCF "\t# Permissions Settings\n";
 				foreach my $perm (@perms) {
 					next unless $perm->{'directory'};
 
@@ -192,12 +197,22 @@ sub build {
 				}
 
 				print RCF "\t\#\n\n";
+				print ARCF "\t\#\n\n";
 			}
 
 			$self->{'manifest'}{$appK} = { 'host' => $app->{'host'}, 'lport' => $app->{'port'}, 'user' => $app->{'user'} || undef };
 
 			$app->{'shell'} = $cfg->{'shell'};
 			print RCF $self->rc_app_start_block( $appK => $app );
+			print ARCF $self->rc_app_start_block( $appK => $app );
+
+			print ARCF $self->rc_start_footer();
+			print ARCF $self->rc_stop_header();
+			print ARCF $self->rc_app_stop_block( $appK => $app );
+			print ARCF $self->rc_stop_footer();
+			print ARCF $self->rc_handler($arcf);
+			close (ARCF);
+			chmod 0755, $arcf;
 		}
 	}
 
@@ -383,6 +398,9 @@ EOB
 
 
 sub rc_handler {
+	shift @_ if ref $_[0];
+
+	my $hndl = int @_ ? shift @_ : 'limerick';
 	return <<EOB;
 
 case \"\$1\" in
@@ -395,7 +413,7 @@ case \"\$1\" in
 		exit 0
         ;;
 	*)
-          	echo "Usage: limerick start|stop"
+          	echo "Usage: $hndl start|stop"
                 exit 1
         ;;
 esac
@@ -435,6 +453,15 @@ sub _build_env {
 	}
 
 	return ( join("\n", @env), join("\n", @uenv) );
+}
+
+sub _get_apprc_fn {
+	my $rcfn = shift @_;
+	my $fn   = shift @_;
+
+	my @v = File::Spec->splitpath( $rcfn );
+
+	return File::Spec->catfile( $v[1], $fn );
 }
 
 1;
