@@ -128,7 +128,7 @@ sub build {
 			next;
 		} else {
 
-			my $arcf = _get_apprc_fn( $rcfn => "app.$appK" );
+			my $arcf = _get_apprc_fn( $rcfn => "app.$appK-rc.sh" );
 			open(ARCF, ">", $arcf) or return undef;
 			print ARCF $self->rc_start_header( $cfg->{'as_root'} => $cfg->{'shell'} );
 
