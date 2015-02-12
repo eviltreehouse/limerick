@@ -261,7 +261,7 @@ sub rc_app_start_block {
 
 	my $local_tmpl = <<EOT
 	 # {{app}}
-	 echo "[.] Starting {{app}}";
+	 echo "[.] Starting {{app}} on localhost:{{port}} as {{mode}}";
 	 cd {{approot}}/bin
 	 echo {{port}} > tmp/app.port
 	 export LIMERICK_SERVER_PORT={{port}}
@@ -279,7 +279,7 @@ EOT
 
 	my $sudo_tmpl = <<EOT
 	 # {{app}}
-	 echo "[.] Starting {{app}}";
+	 echo "[.] Starting {{app}} on localhost:{{port}} as {{mode}}";
 	 cd {{approot}}/bin
 	 sudo -u {{user}} {{shell}} << CMD
 	 echo {{port}} > tmp/app.port
