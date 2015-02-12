@@ -263,6 +263,7 @@ sub rc_app_start_block {
 	 # {{app}}
 	 echo "[.] Starting {{app}}";
 	 cd {{approot}}/bin
+	 echo {{port}} > tmp/app.port
 	 export LIMERICK_SERVER_PORT={{port}}
 	 export LIMERICK_LAYER={{mode}}
 	 export LIMERICK_SERVER_LIB={{server}}
@@ -281,6 +282,7 @@ EOT
 	 echo "[.] Starting {{app}}";
 	 cd {{approot}}/bin
 	 sudo -u {{user}} {{shell}} << CMD
+	 echo {{port}} > tmp/app.port
 	 export LIMERICK_SERVER_PORT={{port}}
 	 export LIMERICK_LAYER={{mode}}
 	 export LIMERICK_SERVER_LIB={{server}}
@@ -326,6 +328,7 @@ sub rc_app_stop_block {
 	  echo "[.] Killing {{app}} / PID \$kpid"
 	  kill \$kpid	  
 	  rm -f {{approot}}/bin/tmp/run.pid
+	  rm -f {{approot}}/bin/tmp/app.port
 	 fi
 
 EOT
