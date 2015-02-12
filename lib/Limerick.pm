@@ -1,4 +1,4 @@
-package Limerick 0.9.1;
+package Limerick v0.9.1;
 use strict;
 
 require Limerick::ConfigParser;
