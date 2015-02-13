@@ -12,7 +12,7 @@
 				"server"     : "Starlet",
 				"permissions" : [
 					{ "directory" : "logs", "chown": false, "chmod": "0770" },
-					{ "directory" : "data", "chown": false, "chmod": "0774" },
+					{ "directory" : "data", "chown": false, "chmod": "0774" }
 				]
 			}
 		},

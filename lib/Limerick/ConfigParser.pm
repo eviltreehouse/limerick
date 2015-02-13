@@ -75,6 +75,8 @@ sub _parseFromDataString {
 
 	if (! $@) {
 		$self->{'struct'} = $json_data;
+	} else {
+		print STDERR "Config ERROR: " . $@ . "\n\n";
 	}
 }
 
