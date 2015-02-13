@@ -281,7 +281,7 @@ sub cmd_build {
 
 	if (my $ret = $L->build_frontend_config()) {
 		cout "Frontend build complete.";
-		cout "Ensure that '$ret' is included in your core NGINX configuration.";
+		cout "Ensure that '$ret' is included in your core web server configuration.";
 	} elsif( defined($ret) ) {
 		# We tried.. but we failed.
 		cerr "Failed to build frontend configuration.";

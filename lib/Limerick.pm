@@ -116,7 +116,7 @@ sub build_frontend_config {
 		my $ret = $builder->build( $self->active_apps );
 		return $ret ? $ret : 0;
 	} else {
-		if (! $self->{'configData'}->{'frontend'}) {
+		if (! $self->{'configData'}->{'frontend'} || lc $self->{'configData'}->{'frontend'} eq 'none') {
 			# Don't care.
 			return undef;
 		} else {
