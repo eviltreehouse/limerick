@@ -156,6 +156,11 @@ sub cmd_app_add {
 		'domain=s' => \@domain
 	);
 
+	if ($_[0]) {
+		my $app_nm = shift @_;
+		$app_path = Limerick::get_dir_for_poet_app($app_nm);
+	}
+
 	if (ref $_[0]) {
 		_cmd_opts(0, shift @_, %opts);
 	} else {
@@ -219,12 +224,14 @@ sub cmd_app_add {
 }
 
 sub cmd_app_new {
-	my $app_path = $ARGV[1];
+	my $app_nm = $ARGV[1];
 	my @domain;
 
 	my @O = _cmd_opts(2, 
 		'domain=s' => \@domain
 	);
+
+	my $app_path = Limerick::get_dir_for_poet_app( $app_nm );
 
 	if (-e $app_path) {
 		cerr "$app_path already exists on your filesystem!";
@@ -235,7 +242,7 @@ sub cmd_app_new {
 	my @poet_out = `poet new $app_path`;
 	if ($? == 0) {
 		cout "poet returned OK. Running 'limerick app-add'...";
-		return cmd_app_add(\@O);
+		return cmd_app_add($app_nm => \@O);
 	} else {
 		cerr "poet returned NOT OK:";
 		print map { "[*] $_"; } @poet_out;

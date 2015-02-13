@@ -356,5 +356,20 @@ sub get_app_gid {
 	return $gid;	
 }
 
+sub get_dir_for_poet_app {
+	shift @_ if ref $_[0];
+	
+	my $app_name = shift @_;
+	my $dir;
+
+	if ( $app_name =~ /^[A-Z]+$/ ) {
+	$dir = lc($app_name);
+	} else {
+		$dir = lcfirst($app_name);
+		$dir =~ s/([A-Z])/"_" . lc($1)/ge;
+	}
+
+	return $dir;
+}
 
 1;
