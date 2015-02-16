@@ -1,6 +1,6 @@
 package {{app}}::DBHandle;
 use strict;
-use Poet qw/$poet $conf/;
+use Poet qw/$poet $conf $log/;
 
 require DBI;
 my $DBH;
@@ -8,6 +8,13 @@ my $DBH;
 sub new {
 	if (ref $DBH && $DBH->ping) { return $DBH; }
 	my $target = $conf->get('database.hostname') || $conf->get('database.socket');
+
+	# Check for all requisite elements
+	if ( !( $conf->get('database.engine') || $conf->get('database.database') || $target)) {
+		$log->error("Missing database configuration elements. No database handle can be created.");
+		return undef;
+	}
+
 	my @dsn = ('dbi', $conf->get('database.engine'), $conf->get('database.database'), $target);
 	$DBH = DBI->connect(join(':', @dsn), $conf->get_secure('database.username'), _get_db_passwd()
 			, { RaiseError => 0, PrintError => 0 });
