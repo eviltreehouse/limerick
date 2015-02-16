@@ -18,6 +18,7 @@ my %commands = (
 	'setup' => \&cmd_setup,
 	'app-add'   => \&cmd_app_add,
 	'app-new'   => \&cmd_app_new,
+	'app-update' => \&cmd_app_update,
 	'app-on' => \&cmd_app_activate,
 	'app-off' => \&cmd_app_deactivate,
 	'app-list' => \&cmd_app_list,
@@ -143,6 +144,43 @@ sub cmd_app_deactivate {
 		}
 
 	}
+}
+
+sub cmd_app_update {
+	my $app_path = $ARGV[1];
+
+	if (! -d $app_path) {
+		cerr "$app_path is not a directory, or is not readable by this user.";
+		return 1;
+	}
+
+	if (! -f "$app_path/.poet_root") {
+		cerr "$app_path does not appear to be a valid Poet application.";
+		return 1;
+	}
+
+	my $poet_root = `grep app_name $app_path/.poet_root`;
+
+	my ($app_name) = $poet_root =~ m/app_name\:\s+(.*?)$/;
+	if (! length $app_name) {
+		cerr "Unable to determine application name!";
+		return 1;
+	}
+
+	my $orig_app_name = $app_name;
+	$app_name = lc $app_name; $app_name =~ s/[^a-z0-9_\-\.]//g;
+
+	my $L = new Limerick();
+	
+	if (! $L->config->success()) {
+		cerr "Configuration file is malformed.";
+		return 1;
+	} else {
+		cout "Updating $app_name...";
+
+		return 1 if !$L->empower_app( $app_path, $orig_app_name, { 'update' => 1 } );
+		return 0;
+	}	
 }
 
 sub cmd_app_add { 

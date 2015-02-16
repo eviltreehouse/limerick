@@ -134,6 +134,7 @@ sub empower_app {
 	my $self = shift;
 	my $app_dir = shift;
 	my $app_name = shift;
+	my $r_opts   = ref $_[0] eq 'HASH' ? shift @_ : {};
 
 	my $app_user = get_app_user($app_dir);
 	my $app_grp  = get_app_group($app_dir);
@@ -276,7 +277,7 @@ sub empower_app {
 		cnotify "$app_dir/lib/$app_name/Import.pm";		
 	}
 
-	if (-f "$app_dir/lib/$app_name/DBHandle.pm") {
+	if (-f "$app_dir/lib/$app_name/DBHandle.pm" && (! $r_opts->{'update'}) ) {
 		# Skip it...
 	} else {
 		my $patcher = new Limerick::SourcePatcher( { 'source' => "$FindBin::Bin/skel/AppDBHandle.pm-dist", 'safe' => 1 } );
